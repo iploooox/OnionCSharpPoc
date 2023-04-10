@@ -1,7 +1,14 @@
+using System.ComponentModel.DataAnnotations;
 using FluentAssertions;
+using FluentValidation;
+using FluentValidation.Results;
+using LanguageExt.Common;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using NSubstitute;
 using OnionCSharpPoc.Movies;
+using ValidationException = FluentValidation.ValidationException;
 
 namespace OnionCSharpPocTest.Movies;
 
@@ -103,6 +110,46 @@ public class UnitTestMovieController
         // Assert
         result.Should().BeOfType<OkResult>();
     }
+    
+    [Fact]
+    public void AddMovie_Should_Return_BadRequest_When_Model_Invalid()
+    {
+        // Arrange
+        var movie = new MovieEntity(0, "", "", 0); // invalid model
+
+        var service = new MovieService(null, new MovieValidator(), null);
+        var controller = new MoviesController(service);
+        
+        // Act
+        var result = controller.AddMovie(movie);
+
+        // Assert
+        result.Should().BeOfType<BadRequestObjectResult>(); // should return a bad request result
+        var badRequestResult = (BadRequestObjectResult)result;
+        var problemDetails = (HttpValidationProblemDetails)badRequestResult.Value!;
+
+        problemDetails.Errors["Title"].First().Should().Be("'Title' must not be empty.");
+        problemDetails.Errors["Director"].First().Should().Be("'Director' must not be empty.");
+        problemDetails.Errors["ReleaseYear"].First().Should().Be("'Release Year' must be between 1900 and 2023. You entered 0.");
+    }
+
+    [Fact]
+    public void AddMovie_Should_Return_Ok_When_Model_Valid()
+    {
+        // Arrange
+        var movie = new MovieEntity(0, "", "", 0); // invalid model
+        var service = Substitute.For<IMovieService>();
+        service.AddWithResult(movie).Returns(new Result<bool>(true)); // setup the mock to return a failure result
+        var controller = new MoviesController(service);
+        
+        // Act
+        var result = controller.AddMovie(movie);
+
+        // Assert
+        result.Should().BeOfType<OkObjectResult>(); // should return an OK result
+        var okResult = (OkObjectResult)result;
+        ((bool)okResult.Value!).Should().BeTrue(); // should return true for a successful add operation
+    }
 
     [Fact]
     public void Add_WithInvalidModel_ReturnsBadRequestResult()
@@ -118,6 +165,53 @@ public class UnitTestMovieController
         result.Should().BeOfType<BadRequestResult>();
     }
     
+    [Fact]
+    public async Task AddMovieAsync_Should_Return_Ok_When_Valid()
+    {
+        // Arrange
+        var movie = new MovieEntity(0, "Title", "Director", 2022);
+        var result = new Result<MovieEntity>(movie);
+        var service = Substitute.For<IMovieService>();
+        service.AddResultAsync(movie).Returns(result);
+        var controller = new MoviesController(service);
+
+        // Act
+        var actionResult = await controller.AddMovieAsync(movie);
+        var okResult = actionResult as OkObjectResult;
+
+        // Assert
+        okResult.Should().NotBeNull();
+        var actualMovie = okResult.Value as MovieEntity;
+        actualMovie.Should().NotBeNull();
+        actualMovie.Should().Be(movie);
+    }
+
+    [Fact]
+    public async Task AddMovieAsync_Should_Return_BadRequest_When_Invalid()
+    {
+        // Arrange
+        var movie = new MovieEntity(0, "", "", 0);
+        var result = new Result<MovieEntity>(new ValidationException(new ValidationFailure[]
+        {
+            new("Title", "Title must not be empty")
+        }));
+        var service = Substitute.For<IMovieService>();
+        service.AddResultAsync(movie).Returns(result);
+        var controller = new MoviesController(service);
+
+        // Act
+        var actionResult = await controller.AddMovieAsync(movie);
+        var badRequestResult = actionResult as BadRequestObjectResult;
+
+        // Assert
+        badRequestResult.Should().NotBeNull();
+        var actualError = badRequestResult.Value as HttpValidationProblemDetails;
+        actualError.Should().NotBeNull();
+        actualError.Errors.Should().HaveCount(1);
+        actualError.Errors["Title"].Should().NotBeEmpty();
+        actualError.Errors["Title"].Should().Contain("Title must not be empty");
+    }
+
     [Fact]
     public void Update_WithValidData_ReturnsOkObjectResult()
     {

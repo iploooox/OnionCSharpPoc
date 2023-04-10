@@ -79,6 +79,21 @@ public class UnitTestMovieRepository
         // Assert
         _context.Movies.Should().Contain(x => x.Title == movie.Title);
     }
+    
+    [Fact]
+    public async Task AddAsync_ShouldAddNewMovieAsync()
+    {
+        // Arrange
+        var movieEntity = new MovieEntity(1, "Movie 1", "Director 1", 2020);
+
+        // Act
+        var result = await _repository.AddAsync(movieEntity);
+
+        // Assert
+        var expectedMovie = new MovieEntity(1, "Movie 1", "Director 1", 2020);
+        result.IfSucc(x => x.Should().BeEquivalentTo(expectedMovie));
+        _context.Movies.Should().ContainEquivalentOf(expectedMovie.ToMovieModel());
+    }
 
     [Fact]
     public void Update_ShouldUpdateExistingMovie()

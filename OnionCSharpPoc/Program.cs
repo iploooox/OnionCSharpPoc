@@ -1,5 +1,4 @@
 using FluentValidation;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using OnionCSharpPoc.Infrastructure;
 using OnionCSharpPoc.Movies;

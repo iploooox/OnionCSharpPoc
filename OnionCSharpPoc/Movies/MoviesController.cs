@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using OnionCSharpPoc.Infrastructure.Extensions;
 
 namespace OnionCSharpPoc.Movies
 {
@@ -44,6 +45,22 @@ namespace OnionCSharpPoc.Movies
             {
                 return BadRequest();
             }
+        }
+        
+        [HttpPost("v2")]
+        public IActionResult AddMovie(MovieEntity movie)
+        {
+            var result = _movieService.AddWithResult(movie);
+
+            return result.ToOk(x => x);
+        }
+
+        [HttpPost("v3")]
+        public async Task<IActionResult> AddMovieAsync(MovieEntity movie)
+        {
+            var result = await _movieService.AddResultAsync(movie);
+
+            return result.ToOk(x => x);
         }
 
         [HttpPut("{id}")]

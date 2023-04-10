@@ -1,4 +1,6 @@
 using FluentValidation;
+using FluentValidation.Results;
+using LanguageExt.Common;
 
 namespace OnionCSharpPoc.Movies;
 
@@ -7,6 +9,8 @@ public interface IMovieService
     IReadOnlyCollection<MovieEntity> GetAll();
     MovieEntity? GetById(int id);
     bool Add(MovieEntity movieEntity);
+    Result<bool> AddWithResult(MovieEntity movieEntity);
+    Task<Result<MovieEntity>> AddResultAsync(MovieEntity movieEntity);
     MovieEntity? Update(MovieEntity movieEntity);
     bool Delete(MovieEntity movieEntity);
 }
@@ -55,6 +59,39 @@ public class MovieService : IMovieService
         }
         
         return result;
+    }
+
+    public Result<bool> AddWithResult(MovieEntity movieEntity)
+    {
+        var validationResult = _validator.Validate(movieEntity);
+
+        if (!validationResult.IsValid)
+        {
+            var validationExceptions = new ValidationException(validationResult.Errors);
+            return new Result<bool>(validationExceptions);
+        }
+
+        bool result = _repository.Add(movieEntity);
+
+        if (!result)
+        {
+            _logger.LogWarning("Failed to add movie");
+        }
+
+        return new Result<bool>(result);
+    }
+    
+    public async Task<Result<MovieEntity>> AddResultAsync(MovieEntity movieEntity)
+    {
+        ValidationResult? validationResult = await _validator.ValidateAsync(movieEntity);
+
+        if (!validationResult.IsValid)
+        {
+            var validationExceptions = new ValidationException(validationResult.Errors);
+            return new Result<MovieEntity>(validationExceptions);
+        }
+
+        return await _repository.AddAsync(movieEntity);
     }
 
     public MovieEntity? Update(MovieEntity movieEntity)

@@ -2,5 +2,9 @@
 /OnionCSharpPoc/bin
 /OnionCSharpPocTest/obj
 /OnionCSharpPocTest/bin
+/Benchmark/bin
+/Benchmark/obj
+/Benchmark/BenchmarkDotNet.Artifacts
+/.idea
 moviedatabase.db
 moviedatabase.db*
