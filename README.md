@@ -58,6 +58,9 @@ The following table shows the results of the K6 load tests all ran with 10 VUs:
 | AddWithResult | 15972/s | 605.34µs | 39µs | 34.85ms | 2.46ms |
 | AddResultAsync| 20505/s | 467.77µs | 35µs | 34.24ms | 1.49ms |
 
+![image](https://user-images.githubusercontent.com/115003487/230913806-5fdd7cee-53a5-426f-9959-49b5a445ec94.png)
+
+
 ## Conclusion
 Based on the results, we can see that all three methods can handle a high volume of requests. However, the K6 tests show that the AddResultAsync method performs the best in terms of requests per second and latency.
 
