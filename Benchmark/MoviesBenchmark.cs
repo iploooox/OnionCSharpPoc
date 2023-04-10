@@ -9,7 +9,7 @@ using OnionCSharpPoc.Movies;
 
 namespace OnionCSharpPoc.Benchmarks;
 
-[SimpleJob(RunStrategy.ColdStart, iterationCount: 1)]
+[SimpleJob(RunStrategy.ColdStart, iterationCount: 2)]
 [MemoryDiagnoser(false)]
 public class MoviesBenchmark
 {
@@ -17,7 +17,7 @@ public class MoviesBenchmark
     private ILogger<MovieService> _logger;
     private IValidator<MovieEntity> _validator;
     
-    [Params(100, 1000, 5000)]
+    [Params(1000, 2500, 5000)]
     public int Count { get; set; }
 
     [GlobalSetup]
@@ -68,6 +68,23 @@ public class MoviesBenchmark
         return false;
     }
 
+    [Benchmark]
+    public async Task<MovieEntity?[]> Add_WithInvalidModel_ReturnsBadRequestResult_With_Result_And_Async_Count()
+    {
+        var tasks = new List<Task<MovieEntity?>>();
+        for (var i = 0; i < Count; i++)
+        {
+            tasks.Add(
+                Add_WithInvalidModel_ReturnsBadRequestResult_With_Result_And_Async()); // add the task for this movie entity to the list
+        }
+
+        // Wait for all tasks to complete and collect their results
+        var results = await Task.WhenAll(tasks);
+        
+        // All the value jazz is here only for compiler to not optimize it away.
+        return results;
+    }
+
     private bool Add_WithInvalidModel_ReturnsBadRequestResult()
     {
         // Arrange
@@ -113,6 +130,31 @@ public class MoviesBenchmark
             _logger.LogError("kaboom 500");
 
             return false;
+        });
+    }
+    
+    private async Task<MovieEntity?> Add_WithInvalidModel_ReturnsBadRequestResult_With_Result_And_Async()
+    {
+        // Arrange
+        var service = new MovieService(_mockRepository, _validator, _logger);
+
+        var movieEntity = new MovieEntity(0, "", "", 0);
+        _mockRepository.Add(movieEntity).Returns(true);
+
+        // Act
+        var result = await service.AddResultAsync(movieEntity);
+
+        return result.Match(success => success, exception =>
+        {
+            if (exception is ValidationException validationException)
+            {
+                _logger.LogWarning(validationException.ToJsonString());
+                return null;
+            }
+            
+            _logger.LogError("kaboom 500");
+
+            return null;
         });
     }
 }
